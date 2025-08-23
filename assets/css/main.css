@@ -1,0 +1,99 @@
+@import "tailwindcss";
+
+body {
+  font-family: 'Inter', sans-serif;
+}
+
+input,
+select {
+  border: 1px solid #D1D5DB;
+  background-color: #f8f8f8;
+  border-radius: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  outline: none;
+  transition: background-color 0.3s ease;
+}
+
+select {
+  padding: 0.6rem;
+}
+
+select.filter {
+  cursor: pointer;
+  background-color: white;
+}
+
+input:focus {
+  background-color: #ffffff;
+}
+
+input.search {
+  background-color: #ffffff;
+  border-radius: 100px;
+}
+
+button {
+  opacity: 0.8;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+button.categories {
+  padding: 0.7rem 1.8rem;    
+  font-size: 0.875rem;       
+  border-radius: 30px;       
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  background-color: white;    
+  transition: all 0.2s ease-in-out; 
+  opacity: 0.8;
+  cursor: pointer;
+  /* font-weight: 500; */
+  font-family: 'Inter Regular';
+  color: black;          
+}
+
+button.categories:hover {
+  background-color: #6b79c0;   
+  color: white;               
+  transform: scale(1.05);        
+}
+
+button:hover {
+  opacity: 1;
+  transition: opacity 0.3s ease;
+}
+
+input:disabled {
+  color: rgb(88, 88, 88);
+  background-color: rgb(235, 235, 235);
+}
+
+.fade-slide-enter-from,
+.fade-slide-leave-to {
+  opacity: 0;
+  transform: translateY(10px);
+}
+.fade-slide-enter-to,
+.fade-slide-leave-from {
+  opacity: 1;
+  transform: translateY(0);
+}
+.fade-slide-enter-active,
+.fade-slide-leave-active {
+  transition: opacity 0.4s ease, transform 0.4s ease;
+}
+
+/* Modal Fade */
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+.fade-enter-to,
+.fade-leave-from {
+  opacity: 1;
+}
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.3s ease;
+}
+

@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Siquijor Map - Offline</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f8f9fa;
+            color: #333;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            text-align: center;
+        }
+        
+        .offline-container {
+            max-width: 400px;
+            padding: 40px 20px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        
+        .offline-icon {
+            font-size: 48px;
+            margin-bottom: 20px;
+        }
+        
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background-color: #ff6b6b;
+            margin-right: 8px;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        
+        .online .status-indicator {
+            background-color: #51cf66;
+            animation: none;
+        }
+        
+        h1 {
+            color: #6c7ac1;
+            margin-bottom: 16px;
+            font-size: 24px;
+        }
+        
+        p {
+            color: #666;
+            line-height: 1.5;
+            margin-bottom: 20px;
+        }
+        
+        .retry-btn {
+            background-color: #6c7ac1;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        
+        .retry-btn:hover {
+            background-color: #5a6bb0;
+        }
+        
+        .offline-features {
+            margin-top: 30px;
+            text-align: left;
+        }
+        
+        .offline-features h3 {
+            color: #333;
+            margin-bottom: 12px;
+        }
+        
+        .offline-features ul {
+            color: #666;
+            padding-left: 20px;
+        }
+        
+        .offline-features li {
+            margin-bottom: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="offline-container" id="container">
+        <div class="offline-icon">🗺️</div>
+        <h1>
+            <span class="status-indicator"></span>
+            <span id="status-text">You're Offline</span>
+        </h1>
+        <p id="status-description">
+            No internet connection detected. You can still access the map with previously cached data.
+        </p>
+        
+        <div style="margin: 20px 0;">
+            <button class="retry-btn" onclick="window.location.href='/map'" style="margin-right: 10px;">
+                Open Map
+            </button>
+            <button class="retry-btn" onclick="window.location.reload()">
+                Retry Connection
+            </button>
+        </div>
+        
+        <div class="offline-features">
+            <h3>Offline Features:</h3>
+            <ul>
+                <li>View cached map tiles</li>
+                <li>Browse saved hotspots</li>
+                <li>Search cached locations</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        const container = document.getElementById('container')
+        const statusText = document.getElementById('status-text')
+        const statusDescription = document.getElementById('status-description')
+        
+        function updateStatus() {
+            if (navigator.onLine) {
+                container.classList.add('online')
+                statusText.textContent = "Back Online!"
+                statusDescription.textContent = "Connection restored. You can now access all features."
+                
+                // Auto-reload after 2 seconds when back online
+                setTimeout(() => {
+                    window.location.reload()
+                }, 2000)
+            } else {
+                container.classList.remove('online')
+                statusText.textContent = "You're Offline"
+                statusDescription.textContent = "No internet connection detected. You can still access the map with previously cached data."
+            }
+        }
+        
+        // Check status immediately
+        updateStatus()
+        
+        // Listen for online/offline events
+        window.addEventListener('online', updateStatus)
+        window.addEventListener('offline', updateStatus)
+        
+        // Check connectivity every 3 seconds
+        setInterval(updateStatus, 3000)
+
+        // Also check when the page becomes visible
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden) {
+                updateStatus()
+            }
+        })
+    </script>
+</body>
+</html>
