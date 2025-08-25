@@ -1,4 +1,4 @@
-// Enhanced service worker with account page offline support
+// Enhanced service worker with account page and mytrips offline support
 const CACHE_NAME = 'siquijor-map-v1'
 const API_CACHE_NAME = 'api-data-v1'
 const TILE_DB_NAME = 'MapTilesDB'
@@ -18,7 +18,7 @@ self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then((cache) => {
-        console.log('Caching account pages...')
+        console.log('Caching account and mytrips pages...')
         // Cache account-related pages
         return cache.addAll(ACCOUNT_URLS_TO_CACHE.filter(url => !url.includes('_nuxt')))
       })
@@ -59,14 +59,14 @@ self.addEventListener('fetch', (event) => {
     return
   }
 
-  // Handle Supabase API requests for account data
+  // Handle Supabase API requests for account and trip data
   if (isSupabaseApiRequest(event.request)) {
     event.respondWith(handleSupabaseRequest(event.request))
     return
   }
 
-  // Handle navigation requests to account pages
-  if (event.request.mode === 'navigate' && isAccountPage(url.pathname)) {
+  // Handle navigation requests to account and mytrips pages
+  if (event.request.mode === 'navigate' && (isAccountPage(url.pathname) || isMyTripsPage(url.pathname))) {
     event.respondWith(handleAccountPageRequest(event.request))
     return
   }
@@ -87,14 +87,19 @@ function isSupabaseApiRequest(request) {
           url.pathname.includes('/booking') || 
           url.pathname.includes('/itinerary') || 
           url.pathname.includes('/grouprequest') || 
-          url.pathname.includes('/rentalunit'))
+          url.pathname.includes('/rentalunit') ||
+          url.pathname.includes('/itineraryitem'))
 }
 
 // Check if URL is an account-related page
 function isAccountPage(pathname) {
   return pathname.includes('/guests/account') || 
-         pathname.includes('/guests/mytrips') || 
          pathname.includes('/guests/termsconditions')
+}
+
+// Check if URL is a MyTrips page
+function isMyTripsPage(pathname) {
+  return pathname.includes('/guests/mytrips')
 }
 
 // Check if request is for static assets
@@ -173,7 +178,7 @@ async function handleSupabaseRequest(request) {
   }
 }
 
-// Handle account page navigation requests
+// Handle account page and mytrips navigation requests
 async function handleAccountPageRequest(request) {
   try {
     // Try network first

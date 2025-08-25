@@ -26,7 +26,7 @@ export default defineNuxtConfig({
   },
   pages: true,
   
-  // Enhanced PWA configuration for offline account functionality
+  // Enhanced PWA configuration for offline account and mytrips functionality
   pwa: {
     registerType: 'autoUpdate',
     manifest: {
@@ -67,31 +67,45 @@ export default defineNuxtConfig({
           }
         },
         
-        // Supabase API calls for account data
+        // Supabase API calls for account and trip data
         {
-          urlPattern: /^https:\/\/.*\.supabase\.co\/rest\/v1\/(guest|booking|itinerary|grouprequest|rentalunit).*/,
+          urlPattern: /^https:\/\/.*\.supabase\.co\/rest\/v1\/(guest|booking|itinerary|grouprequest|rentalunit|itineraryitem).*/,
           handler: 'NetworkFirst',
           options: {
             cacheName: 'supabase-api',
             expiration: {
-              maxEntries: 100,
+              maxEntries: 200,
               maxAgeSeconds: 60 * 60 * 24 * 7 // 7 days
             },
             networkTimeoutSeconds: 10
           }
         },
         
-        // Account pages
+        // Account pages and MyTrips pages
         {
           urlPattern: /\/guests\/(account|mytrips|termsconditions)/,
           handler: 'NetworkFirst',
           options: {
             cacheName: 'account-pages',
             expiration: {
-              maxEntries: 20,
+              maxEntries: 50,
               maxAgeSeconds: 60 * 60 * 24 * 3 // 3 days
             },
             networkTimeoutSeconds: 5
+          }
+        },
+        
+        // Trip detail pages (dynamic mytrips pages with query parameters)
+        {
+          urlPattern: /\/guests\/mytrips\?.*/,
+          handler: 'NetworkFirst',
+          options: {
+            cacheName: 'trip-detail-pages',
+            expiration: {
+              maxEntries: 100,
+              maxAgeSeconds: 60 * 60 * 24 * 2 // 2 days
+            },
+            networkTimeoutSeconds: 8
           }
         },
         
@@ -103,6 +117,19 @@ export default defineNuxtConfig({
             cacheName: 'static-assets',
             expiration: {
               maxEntries: 200,
+              maxAgeSeconds: 60 * 60 * 24 * 30 // 30 days
+            }
+          }
+        },
+        
+        // Nuxt generated assets
+        {
+          urlPattern: /^\/_nuxt\/.*/,
+          handler: 'CacheFirst',
+          options: {
+            cacheName: 'nuxt-assets',
+            expiration: {
+              maxEntries: 100,
               maxAgeSeconds: 60 * 60 * 24 * 30 // 30 days
             }
           }
@@ -122,6 +149,13 @@ export default defineNuxtConfig({
         '**/node_modules/**/*',
         'sw.js',
         'workbox-*.js'
+      ],
+      
+      // Additional offline page precaching
+      additionalManifestEntries: [
+        { url: '/guests/account', revision: null },
+        { url: '/guests/mytrips', revision: null },
+        { url: '/guests/termsconditions', revision: null }
       ]
     },
     
