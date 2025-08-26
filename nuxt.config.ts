@@ -121,7 +121,19 @@ export default defineNuxtConfig({
             }
           }
         },
-        
+        // Cache all Nuxt pages for offline navigation
+        {
+          urlPattern: ({ request }) => request.mode === "navigate",
+          handler: "NetworkFirst",
+          options: {
+            cacheName: "nuxt-pages",
+            expiration: {
+              maxEntries: 100,
+              maxAgeSeconds: 60 * 60 * 24 * 7 // keep for 7 days
+            },
+            networkTimeoutSeconds: 5
+          }
+        },
         // Nuxt generated assets
         {
           urlPattern: /^\/_nuxt\/.*/,
@@ -158,6 +170,7 @@ export default defineNuxtConfig({
         { url: '/guests/termsconditions', revision: null }
       ]
     },
+    
     
     // Development options
     devOptions: {

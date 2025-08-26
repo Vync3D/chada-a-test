@@ -7,21 +7,29 @@
           <ArrowLeft class="text-black w-6 h-6 sm:w-7 sm:h-7 mr-3" />
         </button>
         <h1 class="text-xl sm:text-2xl font-bold text-[#6c7ac1]">Tourist Spot Map</h1>
-        <div class="ml-auto flex items-center">
-          <div v-if="isOnline" class="flex items-center text-green-600 bg-green-50 px-3 py-1 rounded-full text-sm">
-            <div class="w-2 h-2 bg-green-600 rounded-full mr-2"></div>
-            Online
+        <transition name="slide-down">
+          <div v-if="showOfflineNotice" class="fixed top-0 left-0 right-0 z-50 bg-orange-500 text-white px-4 py-2 text-center">
+            <div class="flex items-center justify-center gap-2">
+              <WifiOff class="w-4 h-4" />
+              <span class="text-sm font-medium">You're offline. Showing cached data.</span>
+            </div>
           </div>
-          <div v-else class="flex items-center text-orange-600 bg-orange-50 px-3 py-1 rounded-full text-sm">
-            <div class="w-2 h-2 bg-orange-600 rounded-full mr-2"></div>
-            Offline Mode
-          </div>
+        </transition>
+      </div>
+      
+      <!-- Controls -->
+      <!-- Online/Offline Status -->
+      <div class="flex items-center gap-2">
+        <div class="flex items-center gap-2 px-3 py-1 rounded-full text-sm" :class="[
+          isOnline 
+            ? 'bg-green-100 text-green-700' 
+            : 'bg-orange-100 text-orange-700'
+        ]">
+          <Wifi v-if="isOnline" class="w-4 h-4" />
+          <WifiOff v-else class="w-4 h-4" />
+          <span>{{ isOnline ? 'Online' : 'Offline' }}</span>
         </div>
       </div>
-
-      <!-- Controls -->
-      
-
       <!-- 🔎 Search bar -->
       <div class="mb-4">
         <input
@@ -67,7 +75,7 @@
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted, defineComponent, h } from "vue"
-import { ArrowLeft } from "lucide-vue-next"
+import { ArrowLeft,WifiOff, Wifi } from "lucide-vue-next"
 import { useRouter, useNuxtApp } from "#imports"
 import { useRoute } from "vue-router"
 
@@ -81,6 +89,7 @@ const pins = ref([])
 const query = ref("")
 const isOnline = ref(true) // default, updated onMounted
 const mapRef = ref(null)
+const showOfflineNotice = ref(false)
 
 const LMap = ref(null)
 const LMarker = ref(null)
