@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, computed, watch } from 'vue'
+import { ref, onMounted, computed, watch, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ArrowLeft, Plus, Pencil, Calendar, ChevronLeft, ChevronRight, LogOut, SearchX, FileText, WifiOff, Wifi } from 'lucide-vue-next'
 import JoinGroup from '~/components/JoinGroup.vue'
@@ -19,7 +19,11 @@ const CACHE_KEYS = {
   TRIPS: 'cached_trips',
   GUEST_PROFILE: 'cached_guest_profile',
   BOOKING_INFO: 'cached_booking_info',
-  LAST_SYNC: 'last_sync_time'
+  LAST_SYNC: 'last_sync_time',
+  // New keys for detailed trip data
+  TRIP_DETAILS: 'cached_trip_details_',
+  TRIP_MEMBERS: 'cached_trip_members_',
+  TRIP_OWNER: 'cached_trip_owner_'
 }
 
 const goBack = () => {
@@ -101,6 +105,154 @@ function saveToCache() {
   }
 }
 
+// NEW FUNCTION: Cache detailed trip data for a specific trip
+async function cacheTripDetails(itineraryId) {
+  try {
+    console.log(`Caching details for trip ${itineraryId}...`)
+    
+    // Fetch itinerary with items
+    const { data: itineraryData, error: itineraryError } = await $supabase
+      .from('itinerary')
+      .select(`
+        itinerary_ID,
+        name,
+        date,
+        group_ID,
+        guest_ID,
+        itineraryitem (
+          item_ID,
+          time,
+          locationname
+        )
+      `)
+      .eq('itinerary_ID', itineraryId)
+      .maybeSingle()
+
+    if (itineraryError) {
+      console.error(`Error fetching itinerary ${itineraryId}:`, itineraryError)
+      return
+    }
+
+    if (!itineraryData) return
+
+    // Prepare trip details data
+    const tripDetails = {
+      groupId: itineraryData.group_ID,
+      ownerId: itineraryData.guest_ID,
+      tripName: itineraryData.name,
+      tripDate: new Date(itineraryData.date).toLocaleDateString('en-US', {
+        weekday: 'long',
+        month: 'long',
+        day: 'numeric',
+        year: 'numeric'
+      }),
+      itinerary: (itineraryData.itineraryitem || []).map((item) => ({
+        item_ID: item.item_ID,
+        time: item.time,
+        locationname: item.locationname,
+        itinerary_ID: itineraryData.itinerary_ID
+      })),
+      isPendingMember: false, // Will be updated if needed
+      hasPendingRequests: false // Will be updated if needed
+    }
+
+    // Check if current user is pending member (only for group trips)
+    if (itineraryData.group_ID && itineraryData.guest_ID !== guestId.value) {
+      const { data: pendingData, error: pendingError } = await $supabase
+        .from('grouprequest')
+        .select('grequest_ID')
+        .eq('group_ID', itineraryData.group_ID)
+        .eq('guest_ID', guestId.value)
+        .eq('status', 'pending')
+        .maybeSingle()
+
+      if (!pendingError && pendingData) {
+        tripDetails.isPendingMember = true
+      }
+    }
+
+    // Fetch owner name
+    let ownerName = ''
+    if (itineraryData.guest_ID) {
+      const { data: ownerData, error: ownerError } = await $supabase
+        .from('guest')
+        .select('firstName, lastName')
+        .eq('guest_ID', itineraryData.guest_ID)
+        .maybeSingle()
+
+      if (!ownerError && ownerData) {
+        ownerName = `${ownerData.firstName} ${ownerData.lastName}`
+      }
+    }
+
+    // Fetch approved members (for group trips)
+    let approvedMembers = []
+    if (itineraryData.group_ID) {
+      const { data: membersData, error: membersError } = await $supabase
+        .from('grouprequest')
+        .select(`
+          guest_ID,
+          guest:guest_ID (
+            firstName,
+            lastName
+          )
+        `)
+        .eq('group_ID', itineraryData.group_ID)
+        .eq('status', 'approved')
+        .neq('guest_ID', itineraryData.guest_ID)
+
+      if (!membersError && membersData) {
+        approvedMembers = membersData.map(r => ({
+          ...r,
+          fullname: `${r.guest.firstName} ${r.guest.lastName}`
+        }))
+      }
+
+      // Check for pending requests (only if current user is the owner)
+      if (itineraryData.guest_ID === guestId.value) {
+        const { data: pendingRequests, error: pendingRequestsError } = await $supabase
+          .from('grouprequest')
+          .select('grequest_ID')
+          .eq('group_ID', itineraryData.group_ID)
+          .eq('status', 'pending')
+
+        if (!pendingRequestsError) {
+          tripDetails.hasPendingRequests = pendingRequests.length > 0
+        }
+      }
+    }
+
+    // Save all trip data to cache
+    localStorage.setItem(CACHE_KEYS.TRIP_DETAILS + itineraryId, JSON.stringify(tripDetails))
+    localStorage.setItem(CACHE_KEYS.TRIP_MEMBERS + itineraryId, JSON.stringify(approvedMembers))
+    localStorage.setItem(CACHE_KEYS.TRIP_OWNER + itineraryId, JSON.stringify(ownerName))
+    localStorage.setItem(`trip_last_sync_${itineraryId}`, new Date().toISOString())
+
+    console.log(`Trip ${itineraryId} details cached successfully`)
+
+  } catch (error) {
+    console.error(`Error caching trip details for ${itineraryId}:`, error)
+  }
+}
+
+// NEW FUNCTION: Cache all trip details
+async function cacheAllTripDetails() {
+  if (trips.value.length === 0) return
+  
+  console.log('Caching details for all trips...')
+  
+  const cachePromises = trips.value.map(trip => 
+    cacheTripDetails(trip.itinerary_ID)
+  )
+  
+  try {
+    await Promise.all(cachePromises)
+    console.log('All trip details cached successfully')
+  } catch (error) {
+    console.error('Error caching all trip details:', error)
+  }
+}
+
 // Sync data when online
 async function syncDataWhenOnline() {
   if (!navigator.onLine) return
@@ -114,6 +266,15 @@ function logout() {
   Object.values(CACHE_KEYS).forEach(key => {
     localStorage.removeItem(key)
   })
+  
+  // Clear individual trip caches
+  trips.value.forEach(trip => {
+    localStorage.removeItem(CACHE_KEYS.TRIP_DETAILS + trip.itinerary_ID)
+    localStorage.removeItem(CACHE_KEYS.TRIP_MEMBERS + trip.itinerary_ID)
+    localStorage.removeItem(CACHE_KEYS.TRIP_OWNER + trip.itinerary_ID)
+    localStorage.removeItem(`trip_last_sync_${trip.itinerary_ID}`)
+  })
+  
   localStorage.removeItem('user_id')
   localStorage.removeItem('user_role')
   router.push('/')
@@ -295,8 +456,13 @@ async function fetchAllData() {
     allTrips.sort((a, b) => new Date(a.date) - new Date(b.date));
     trips.value = allTrips;
 
-    // Save to cache after successful fetch
+    // Save basic trip list to cache first
     saveToCache()
+
+    // NEW: Cache detailed data for all trips
+    if (trips.value.length > 0) {
+      await cacheAllTripDetails()
+    }
 
   } catch (error) {
     console.error('Error fetching data:', error)
