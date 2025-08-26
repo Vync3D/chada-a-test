@@ -79,7 +79,7 @@ const enableEdit = () => {
 
 const cancelEdit = () => {
     isEditing.value = false
-    loadHotspotData() // Reset to original data
+    loadHotspotData() // Reset to original dataa
 }
 
 const triggerFileInput = () => {
